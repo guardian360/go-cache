@@ -105,3 +105,12 @@ func TestDefaultExpiration(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, v)
 }
+
+func TestCleanupInterval(t *testing.T) {
+	c := New(CleanupInterval(time.Millisecond))
+	c.Put("foo", "bar", 3*time.Millisecond)
+
+	<-time.After(5 * time.Millisecond)
+
+	assert.NotContains(t, c.WithExpired(true).Items(), "foo")
+}

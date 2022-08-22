@@ -9,6 +9,9 @@ type Options struct {
 	Items map[string]Item
 	// Expiration represents the default expiration of the cache.
 	Expiration time.Duration
+	// CleanupInterval represents the default interval for the janitor to clean
+	// the cache of expired items.
+	CleanupInterval time.Duration
 }
 
 // Option manipulates the Options passed.
@@ -28,11 +31,20 @@ func Expiration(e time.Duration) Option {
 	}
 }
 
+// CleanupInterval sets the interval for the janitor to clean the cache of
+// expired items.
+func CleanupInterval(ci time.Duration) Option {
+	return func(o *Options) {
+		o.CleanupInterval = ci
+	}
+}
+
 // NewOptions returns a new Options struct.
 func NewOptions(opts ...Option) Options {
 	options := Options{
-		Items:      make(map[string]Item),
-		Expiration: DefaultExpiration,
+		Items:           make(map[string]Item),
+		Expiration:      DefaultExpiration,
+		CleanupInterval: DefaultCleanupInterval,
 	}
 	for _, o := range opts {
 		o(&options)

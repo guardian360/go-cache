@@ -2,6 +2,7 @@ package cache
 
 import (
 	"errors"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -26,6 +27,9 @@ var (
 	// DefaultExpiration is the default duration for items stored in
 	// the cache to expire.
 	DefaultExpiration time.Duration = 0
+	// DefaultCleanupInterval is the default duration for the janitor to clean
+	// up expired items from the cache.
+	DefaultCleanupInterval time.Duration = 0
 
 	// ErrItemExpired is returned in Cache.Get when the item found in the cache
 	// has expired.
@@ -52,40 +56,64 @@ type Cache interface {
 	// Items copies all unexpired items in the cache to a new map and returns
 	// it.
 	Items() map[string]Item
+	// WithExpired sets a flag to determine whether or not to include expired
+	// items in the outputs of Get and Items. It returns itself so it can be
+	// used fluently.
+	WithExpired(e bool) Cache
+	// DeleteExpired removes all expired items from the cache.
+	DeleteExpired()
 }
 
 // New returns a new cache.
 func New(opts ...Option) Cache {
 	options := NewOptions(opts...)
+
 	var items map[string]Item
 	if len(options.Items) > 0 {
 		items = options.Items
 	} else {
 		items = make(map[string]Item)
 	}
-	return &cache{
+
+	var ci time.Duration
+	if options.CleanupInterval > 0 {
+		ci = options.CleanupInterval
+	} else {
+		ci = DefaultCleanupInterval
+	}
+
+	c := &cache{
 		opts:  options,
 		items: items,
 	}
+
+	if ci > 0 {
+		c.janitor = NewJanitor(ci)
+		go c.janitor.Start(c)
+		runtime.SetFinalizer(c, c.janitor.Stop)
+	}
+
+	return c
 }
 
 type cache struct {
 	opts Options
-	sync.RWMutex
 
-	items map[string]Item
+	mu          sync.RWMutex
+	items       map[string]Item
+	withExpired bool
+	janitor     Janitor
 }
 
 func (c *cache) Get(k string) (interface{}, error) {
-	c.RWMutex.Lock()
-	defer c.RWMutex.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	item, found := c.items[k]
 	if !found {
 		return nil, ErrKeyNotFound
 	}
-	if item.Expired() {
-		delete(c.items, k)
+	if !c.withExpired && item.Expired() {
 		return nil, ErrItemExpired
 	}
 	return item.Value, nil
@@ -99,17 +127,15 @@ func (c *cache) Put(k string, v interface{}, d time.Duration) error {
 	if d > 0 {
 		e = time.Now().Add(d).UnixNano()
 	}
-
-	c.RWMutex.Lock()
-	defer c.RWMutex.Unlock()
-
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.items[k] = Item{v, e}
 	return nil
 }
 
 func (c *cache) Delete(k string) error {
-	c.RWMutex.Lock()
-	defer c.RWMutex.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	_, found := c.items[k]
 	if !found {
@@ -121,16 +147,32 @@ func (c *cache) Delete(k string) error {
 }
 
 func (c *cache) Items() map[string]Item {
-	c.RWMutex.Lock()
-	defer c.RWMutex.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	m := make(map[string]Item)
 	for k, v := range c.items {
-		if v.Expired() {
+		if !c.withExpired && v.Expired() {
 			continue
 		}
 		m[k] = v
 	}
-
 	return m
+}
+
+func (c *cache) WithExpired(e bool) Cache {
+	c.withExpired = e
+	return c
+}
+
+func (c *cache) DeleteExpired() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for k, v := range c.items {
+		if !v.Expired() {
+			continue
+		}
+		delete(c.items, k)
+	}
 }
