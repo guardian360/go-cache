@@ -27,8 +27,12 @@ import (
 )
 
 func main() {
-	// Create a cache with a default expiration time of 5 minutes.
-	c := cache.New(cache.Expiration(5 * time.Minute))
+	// Create a cache with a default expiration time of 5 minutes and a
+	// cleanup interval of 10 minutes.
+	c := cache.New(
+		cache.Expiration(5 * time.Minute),
+		cache.CleanupInterval(10 * time.Minute),
+	)
 
 	// Set the value of the key "foo" to "bar" with the default expiration
 	// time.
@@ -51,7 +55,7 @@ func main() {
 
 ## Reference
 
-Documentation can be found using the `go doc` command or at [pkg.go.dev][docs]
+Documentation can be found using the `go doc` command or at [pkg.go.dev][docs].
 
 ## Credits
 
