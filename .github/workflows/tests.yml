@@ -1,22 +1,56 @@
 ---
 
-name: tests
-on:
-  pull_request:
-    branch:
-    - main
-    types:
-    - opened
-    - reopened
-  push:
-  workflow_dispatch:
+name: Lint & Test
+
+on: [push, pull_request]
+
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go-version }}-
+
+      - name: Run linters
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.50.1
+
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-    - run: go get -v -t -d ./...
-    - run: go test -v ./...
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go-version }}-
+
+      - name: Run tests
+        run: go test ./...

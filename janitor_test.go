@@ -13,7 +13,7 @@ func TestJanitorStart(t *testing.T) {
 		stop:     make(chan bool),
 	}
 	c := New()
-	c.Put("foo", "bar", 3*time.Millisecond)
+	_ = c.Put("foo", "bar", 3*time.Millisecond)
 
 	go j.Start(c)
 	<-time.After(5 * time.Millisecond)
