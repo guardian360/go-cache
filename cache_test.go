@@ -97,7 +97,7 @@ func TestItems(t *testing.T) {
 
 func TestDefaultExpiration(t *testing.T) {
 	c := New(Expiration(1 * time.Millisecond))
-	c.Put("foo", "bar", 0)
+	_ = c.Put("foo", "bar", 0)
 
 	<-time.After(5 * time.Millisecond)
 	v, err := c.Get("foo")
@@ -108,7 +108,7 @@ func TestDefaultExpiration(t *testing.T) {
 
 func TestCleanupInterval(t *testing.T) {
 	c := New(CleanupInterval(time.Millisecond))
-	c.Put("foo", "bar", 3*time.Millisecond)
+	_ = c.Put("foo", "bar", 3*time.Millisecond)
 
 	<-time.After(5 * time.Millisecond)
 
