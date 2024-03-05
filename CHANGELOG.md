@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/guardian360/go-cache/compare/v1.1.3...v1.1.4) (2024-03-05)
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/stretchr/testify from 1.8.4 to 1.9.0 ([e9a0830](https://github.com/guardian360/go-cache/commit/e9a0830afc78f12aa4e05c3f086f36d013b76bd5))
+
 ## [1.1.3](https://github.com/guardian360/go-cache/compare/v1.1.2...v1.1.3) (2023-11-16)
 
 
